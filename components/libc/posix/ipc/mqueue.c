@@ -232,8 +232,8 @@ ssize_t mq_receive(mqd_t id, char *msg_ptr, size_t msg_len, unsigned *msg_prio)
         return -1;
     }
 
-    result = rt_mq_recv(mqdes->mq, msg_ptr, msg_len, RT_WAITING_FOREVER);
-    if (result == RT_EOK)
+    result = rt_mq_recv_prio(mqdes->mq, msg_ptr, msg_len, (rt_int32_t *)msg_prio, RT_WAITING_FOREVER, RT_UNINTERRUPTIBLE);
+    if (result >= 0)
         return rt_strlen(msg_ptr);
 
     rt_set_errno(EBADF);
@@ -255,7 +255,7 @@ int mq_send(mqd_t id, const char *msg_ptr, size_t msg_len, unsigned msg_prio)
         return -1;
     }
 
-    result = rt_mq_send(mqdes->mq, (void*)msg_ptr, msg_len);
+    result = rt_mq_send_wait_prio(mqdes->mq, (void *)msg_ptr, msg_len, msg_prio, 0, RT_UNINTERRUPTIBLE);
     if (result == RT_EOK)
         return 0;
 
@@ -287,8 +287,9 @@ ssize_t mq_timedreceive(mqd_t                  id,
     if (abs_timeout != RT_NULL)
         tick = rt_timespec_to_tick(abs_timeout);
 
-    result = rt_mq_recv(mqdes->mq, msg_ptr, msg_len, tick);
-    if (result == RT_EOK)
+    result = rt_mq_recv_prio(mqdes->mq, msg_ptr, msg_len, (rt_int32_t *)msg_prio, tick, RT_UNINTERRUPTIBLE);
+
+    if (result >= 0)
         return rt_strlen(msg_ptr);
 
     if (result == -RT_ETIMEOUT)
@@ -358,19 +359,19 @@ RTM_EXPORT(mq_close);
 /**
  * @brief    This function will remove a message queue (REALTIME).
  *
- * @note    The mq_unlink() function shall remove the message queue named by the string name. 
- *          If one or more processes have the message queue open when mq_unlink() is called, 
- *          destruction of the message queue shall be postponed until all references to the message queue have been closed. 
+ * @note    The mq_unlink() function shall remove the message queue named by the string name.
+ *          If one or more processes have the message queue open when mq_unlink() is called,
+ *          destruction of the message queue shall be postponed until all references to the message queue have been closed.
  *          However, the mq_unlink() call need not block until all references have been closed; it may return immediately.
- * 
- *          After a successful call to mq_unlink(), reuse of the name shall subsequently cause mq_open() to behave as if 
- *          no message queue of this name exists (that is, mq_open() will fail if O_CREAT is not set, 
+ *
+ *          After a successful call to mq_unlink(), reuse of the name shall subsequently cause mq_open() to behave as if
+ *          no message queue of this name exists (that is, mq_open() will fail if O_CREAT is not set,
  *          or will create a new message queue if O_CREAT is set).
- * 
+ *
  * @param    name  is the name of the message queue.
  *
- * @return   Upon successful completion, the function shall return a value of zero. 
- *           Otherwise, the named message queue shall be unchanged by this function call, 
+ * @return   Upon successful completion, the function shall return a value of zero.
+ *           Otherwise, the named message queue shall be unchanged by this function call,
  *           and the function shall return a value of -1 and set errno to indicate the error.
  *
  * @warning  This function can ONLY be called in the thread context, you can use RT_DEBUG_IN_THREAD_CONTEXT to
@@ -384,9 +385,9 @@ RTM_EXPORT(mq_close);
  *              The named message queue does not exist.
  *           The mq_unlink() function may fail if:
  *              [ENAMETOOLONG]
- *              The length of the name argument exceeds {_POSIX_PATH_MAX} on systems that do not support the XSI option 
- *              or exceeds {_XOPEN_PATH_MAX} on XSI systems,or has a pathname component that is longer than {_POSIX_NAME_MAX} on systems that do 
- *              not support the XSI option or longer than {_XOPEN_NAME_MAX} on XSI systems.A call to mq_unlink() with a name argument that contains 
+ *              The length of the name argument exceeds {_POSIX_PATH_MAX} on systems that do not support the XSI option
+ *              or exceeds {_XOPEN_PATH_MAX} on XSI systems,or has a pathname component that is longer than {_POSIX_NAME_MAX} on systems that do
+ *              not support the XSI option or longer than {_XOPEN_NAME_MAX} on XSI systems.A call to mq_unlink() with a name argument that contains
  *              the same message queue name as was previously used in a successful mq_open() call shall not give an [ENAMETOOLONG] error.
  */
 int mq_unlink(const char *name)

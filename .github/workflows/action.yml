@@ -112,6 +112,7 @@ jobs:
             SUB_RTT_BSP: 
                 - "stm32/stm32f207-st-nucleo"
                 - "stm32/stm32f302-st-nucleo"
+                - "stm32/stm32f334-st-nucleo"
                 - "stm32/stm32f401-st-nucleo"
                 - "stm32/stm32f401-weact-blackpill"
                 - "stm32/stm32f405-smdz-breadfruit"
@@ -291,6 +292,11 @@ jobs:
             SUB_RTT_BSP:  
                 - "stm32/stm32l475-atk-pandora"
                 - "renesas/ra6m3-hmi-board"
+         -  RTT_BSP: "simulator" 
+            RTT_TOOL_CHAIN: "gcc"
+            SUB_RTT_BSP:  
+                - "simulator"
+
     steps:
       - uses: actions/checkout@v3
       - name: Set up Python
@@ -363,6 +369,11 @@ jobs:
           /opt/xpack-riscv-none-embed-gcc-8.3.0-2.3/bin/riscv-none-embed-gcc --version
           echo "RTT_EXEC_PATH=/opt/xpack-riscv-none-embed-gcc-8.3.0-2.3/bin" >> $GITHUB_ENV
 
+      - name: Install Simulator Tools
+        if: ${{ matrix.legs.RTT_TOOL_CHAIN == 'gcc' && success() }}
+        run: |
+          sudo apt-get -qq install libsdl2-dev
+
       - name: Bsp Scons Compile
         if: ${{ success() }}
         shell: bash
@@ -378,6 +389,7 @@ jobs:
             count=$((count+1))
             echo "::group::Compiling BSP: ==$count=== $bsp ===="
             echo bsp/$bsp
+            ls bsp/$bsp/Kconfig && scons -C bsp/$bsp --pyconfig-silent
             pushd bsp/$bsp && pkgs --update && popd
             scons -C bsp/$bsp -j$(nproc) --debug=time | tee output.log || \
             { total_time=$(grep "Total command execution time" output.log | awk '{print $5}'); \

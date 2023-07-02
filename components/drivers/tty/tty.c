@@ -5,7 +5,8 @@
  *
  * Change Logs:
  * Date           Author       Notes
- * 2021.12.07     linzhenxing      first version
+ * 2021-12-07     linzhenxing  first version
+ * 2023-06-26     WangXiaoyao  fix bug on foreground app switch
  */
 #include <dfs_file.h>
 #include <dfs_fs.h>
@@ -41,7 +42,7 @@ const struct termios tty_std_termios = {  /* for the benefit of tty drivers  */
 void tty_initstack(struct tty_node *node)
 {
     node->lwp = RT_NULL;
-    node->next = node;
+    node->next = RT_NULL;
 }
 
 static struct tty_node tty_node_cache = { RT_NULL, RT_NULL };
@@ -338,7 +339,11 @@ static int tty_ioctl(struct dfs_file *fd, int cmd, void *args)
     return ret;
 }
 
+#ifdef RT_USING_DFS_V2
+static int tty_read(struct dfs_file *fd, void *buf, size_t count, off_t *pos)
+#else
 static int tty_read(struct dfs_file *fd, void *buf, size_t count)
+#endif
 {
     int ret = 0;
     struct tty_struct *tty = RT_NULL;
@@ -355,7 +360,11 @@ static int tty_read(struct dfs_file *fd, void *buf, size_t count)
     return ret;
 }
 
-static int tty_write(struct dfs_file *fd, const void *buf, size_t count)
+#ifdef RT_USING_DFS_V2
+static int tty_write(struct dfs_file *fd, const void *buf, size_t count, off_t *pos)
+#else
+static int tty_write(struct dfs_file *fd, const void *buf, size_t count )
+#endif
 {
     int ret = 0;
     struct tty_struct *tty = RT_NULL;
@@ -391,15 +400,12 @@ static int tty_poll(struct dfs_file *fd, struct rt_pollreq *req)
 
 static const struct dfs_file_ops tty_fops =
 {
-    tty_open,
-    tty_close,
-    tty_ioctl,
-    tty_read,
-    tty_write,
-    RT_NULL, /* flush */
-    RT_NULL, /* lseek */
-    RT_NULL, /* getdents */
-    tty_poll,
+    .open   = tty_open,
+    .close  = tty_close,
+    .ioctl  = tty_ioctl,
+    .read   = tty_read,
+    .write  = tty_write,
+    .poll   = tty_poll,
 };
 
 const struct dfs_file_ops *tty_get_fops(void)

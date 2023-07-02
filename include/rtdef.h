@@ -132,7 +132,7 @@ typedef rt_base_t                       rt_off_t;       /**< Type for offset */
     #include <stdatomic.h>
     typedef atomic_size_t rt_atomic_t;
 #elif defined(RT_USING_HW_ATOMIC)
-    typedef volatile rt_base_t rt_atomic_t;
+    typedef rt_base_t rt_atomic_t;
 #else
 
     /* To detect std atomic */
@@ -140,7 +140,7 @@ typedef rt_base_t                       rt_off_t;       /**< Type for offset */
         #include <stdatomic.h>
         typedef atomic_size_t rt_atomic_t;
     #else
-        typedef volatile rt_base_t rt_atomic_t;
+        typedef rt_base_t rt_atomic_t;
     #endif /* __GNUC__ && !__STDC_NO_ATOMICS__ */
 
 #endif /* RT_USING_STDC_ATOMIC */
@@ -270,7 +270,7 @@ typedef __gnuc_va_list              va_list;
 typedef int (*init_fn_t)(void);
 #ifdef _MSC_VER
 #pragma section("rti_fn$f",read)
-    #if RT_DEBUG_INIT
+    #ifdef RT_DEBUG_INIT
         struct rt_init_desc
         {
             const char* level;
@@ -296,7 +296,7 @@ typedef int (*init_fn_t)(void);
                                 {__rti_level_##fn, fn };
     #endif
 #else
-    #if RT_DEBUG_INIT
+    #ifdef RT_DEBUG_INIT
         struct rt_init_desc
         {
             const char* fn_name;
@@ -385,6 +385,17 @@ typedef int (*init_fn_t)(void);
 #define RT_ENOSPC                       13              /**< No space left */
 
 /**@}*/
+
+/**
+ * @ingroup BasicDef
+ *
+ * @def RT_IS_ALIGN(addr, align)
+ * Return true(1) or false(0).
+ *     RT_IS_ALIGN(128, 4) is judging whether 128 aligns with 4.
+ *     The result is 1, which means 128 aligns with 4.
+ * @note If the address is NULL, false(0) will be returned
+ */
+#define RT_IS_ALIGN(addr, align) ((!(addr & (align - 1))) && (addr != RT_NULL))
 
 /**
  * @ingroup BasicDef
